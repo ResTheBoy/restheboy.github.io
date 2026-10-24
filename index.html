@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Antwerps TTS</title>
+</head>
+<body>
+    <h2>Antwerps Text-To-Speech</h2>
+
+    <form id="ttsForm">
+        <label>Options: </label>
+        <select id="dropdown"><option>Loading...</option></select>
+        <br><br>
+
+        <textarea id="textInput" placeholder="Type text here..." style="width: 100%; height: 80px;" required></textarea>
+        <br><br>
+
+        <button type="submit">Submit</button>
+    </form>
+
+    <audio id="audioPlayer" controls style="display:none; margin-top:20px;"></audio>
+
+    <script>
+        // Point this directly to your FastAPI backend port
+        const API_URL = "https://antwerp-tts-backend.onrender.com";
+
+        // 1. Fetch dropdown data from backend on page open
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const res = await fetch(`${API_URL}/api/options`);
+                const options = await res.json();
+                const select = document.getElementById('dropdown');
+
+                select.innerHTML = '';
+                options.forEach(item => {
+                    select.add(new Option(item, item));
+                });
+            } catch (err) {
+                console.error("Failed to load options from backend:", err);
+            }
+        });
+
+        // 2. Submit text input + selection parameters
+        document.getElementById('ttsForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            try {
+                const response = await fetch(`${API_URL}/generate-audio`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        text: document.getElementById('textInput').value,
+                        selected_item: document.getElementById('dropdown').value
+                    })
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const player = document.getElementById('audioPlayer');
+                    player.src = URL.createObjectURL(blob);
+                    player.style.display = "block";
+                    player.play();
+                } else {
+                    alert("Backend failed to process synthesis text.");
+                }
+            } catch (err) {
+                console.error("Connection error:", err);
+            }
+        });
+    </script>
+</body>
+</html>
